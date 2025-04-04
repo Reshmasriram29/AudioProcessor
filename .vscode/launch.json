@@ -1,0 +1,24 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "FastAPI",
+            "type": "python",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": [
+                "server:app",
+                "--reload",
+                "--port",
+                "5001"
+            ],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "OPENAI_API_KEY": "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",
+                "SERPAPI_KEY": "74fc8feb25618949631ae1ce9af0afa569eeecb31d48db1bf7d54a1cfb8790e1"
+            },
+            "jinja": true,
+            "justMyCode": true
+        }
+    ]
+} 
