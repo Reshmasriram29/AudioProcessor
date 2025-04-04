@@ -206,6 +206,9 @@ async function processAudio(audioBlob) {
 // Process the transcribed query
 async function processQuery(query) {
     try {
+        console.log("Processing query:", query);
+        updateStatus("Processing your query...");
+        
         const response = await fetch('/api/search', {
             method: 'POST',
             headers: {
@@ -214,42 +217,77 @@ async function processQuery(query) {
             body: JSON.stringify({ query })
         });
         
+        console.log("Received response status:", response.status);
+        
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            throw new Error(`Server returned ${response.status}: ${response.statusText}`);
         }
         
         await handleResponse(response);
     } catch (error) {
-        console.error('Error processing query:', error);
-        updateStatus('Error processing query: ' + error.message);
+        console.error("Error processing query:", error);
+        updateStatus(`Error: ${error.message}`);
     }
 }
 
 async function handleResponse(response) {
     try {
+        console.log("Starting to handle response...");
+        
         const data = await response.json();
+        console.log("Response data:", data);
+        
         if (data.error) {
-            console.error('Error:', data.error);
-            updateStatus('Error: ' + data.error);
+            console.error("Error in response:", data.error);
+            updateStatus(`Error: ${data.error}`);
             return;
         }
-
-        // Display the text response
+        
+        if (!data.text) {
+            console.error("No text in response");
+            updateStatus("No text response received");
+            return;
+        }
+        
+        console.log("Updating status with text response");
         updateStatus(data.text);
-
-        // Play the audio response if available
+        
         if (data.audio) {
-            const audioBlob = base64ToBlob(data.audio, 'audio/mp3');
-            const audioUrl = URL.createObjectURL(audioBlob);
-            const audio = new Audio(audioUrl);
-            audio.play().catch(error => {
-                console.error('Error playing audio:', error);
-                updateStatus('Error playing audio response');
-            });
+            console.log("Processing audio response...");
+            try {
+                const audioBlob = base64ToBlob(data.audio, 'audio/mp3');
+                const audioUrl = URL.createObjectURL(audioBlob);
+                const audio = new Audio(audioUrl);
+                
+                audio.onplay = () => {
+                    console.log("Audio started playing");
+                    updateStatus("Playing audio response...");
+                };
+                
+                audio.onended = () => {
+                    console.log("Audio finished playing");
+                    updateStatus("Audio playback completed");
+                    URL.revokeObjectURL(audioUrl);
+                };
+                
+                audio.onerror = (error) => {
+                    console.error("Audio playback error:", error);
+                    updateStatus("Error playing audio response");
+                    URL.revokeObjectURL(audioUrl);
+                };
+                
+                console.log("Starting audio playback");
+                await audio.play();
+            } catch (error) {
+                console.error("Error handling audio:", error);
+                updateStatus("Error playing audio response");
+            }
+        } else {
+            console.log("No audio in response");
         }
     } catch (error) {
-        console.error('Error handling response:', error);
-        updateStatus('Error processing response');
+        console.error("Error handling response:", error);
+        updateStatus(`Error: ${error.message}`);
     }
 }
 
